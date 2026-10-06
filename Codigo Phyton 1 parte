@@ -94,7 +94,7 @@ def reposicionar_punta(x, y, z):
 
 def ejecutar_trazo(tecla):
     """Trazo frontal ubicado POR DELANTE de la articulación (Y negativo)."""
-    print(f"\n🖊 Dibujando tecla: '{tecla}'")
+    print(f"\n Dibujando tecla: '{tecla}'")
     p.removeAllUserDebugItems()
 
     # LIENZO DELANTERO: Y_LIENZO negativo trae el plano al primer plano frente a la cámara
@@ -181,15 +181,15 @@ def ejecutar_trazo(tecla):
         trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_ALTO, pasos=20, color=[1, 1, 0])
 
     elif tecla in ['A', '*', '#', 'B', 'C', 'D']:
-        print(f"🧹 Comando '{tecla}': Limpiando pantalla.")
+        print(f" Comando '{tecla}': Limpiando pantalla.")
 
     else:
-        print(f"⚠️ Tecla recibida: '{tecla}'")
+        print(f" Tecla recibida: '{tecla}'")
 
 # ==========================================
 # 4. BUCLE PRINCIPAL DE CONTROL
 # ==========================================
-print("\n🚀 Sistema listo. Los números se dibujarán en el plano frontal sin que la articulación los tape...")
+print("\n Sistema listo. Los números se dibujarán en el plano frontal sin que la articulación los tape...")
 
 try:
     while True:
