@@ -1,0 +1,224 @@
+import time
+import math
+import serial
+import pybullet as p
+import pybullet_data
+
+# ==========================================
+# 1. CONFIGURACIÓN DEL PUERTO SERIAL
+# ==========================================
+PUERTO_SERIAL = 'COM5'
+BAUDRATE = 115200
+
+try:
+    ser = serial.Serial(PUERTO_SERIAL, BAUDRATE, timeout=0.05)
+    print(f" Conectado exitosamente a la ESP32 en el puerto {PUERTO_SERIAL}")
+except Exception as e:
+    print(f" Error al conectar al puerto serial: {e}")
+    print("Verifica el puerto COM y asegúrate de cerrar el Monitor Serie de Arduino IDE.")
+    exit()
+
+# ==========================================
+# 2. INICIALIZACIÓN DE LA SIMULACIÓN 3D
+# ==========================================
+physicsClient = p.connect(p.GUI)
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+p.setGravity(0, 0, -9.81)
+
+planeId = p.loadURDF("plane.urdf")
+robotId = p.loadURDF("brazo.urdf", [0, 0, 0], useFixedBase=True)
+
+# VISTA FRONTAL ENFOCADA EN EL LIENZO DELANTERO
+p.resetDebugVisualizerCamera(
+    cameraDistance=1.0,
+    cameraYaw=0,          # Vista totalmente frontal
+    cameraPitch=-8,       # Inclinación suave
+    cameraTargetPosition=[0, -0.20, 0.48] # Apunta hacia el plano frontal (Y negativo)
+)
+
+LINK_PUNTA = 2 
+
+# ==========================================
+# 3. FUNCIONES DE DIBUJO Y CINEMÁTICA
+# ==========================================
+def obtener_posicion_punta():
+    try:
+        state = p.getLinkState(robotId, LINK_PUNTA)
+        return state[0]
+    except Exception:
+        return [0, -0.25, 0.50]
+
+def trazar_linea_cartesiana(x_destino, y_destino, z_destino, pasos=20, color=[1, 1, 0]):
+    """Mueve la punta dibujando completamente al frente sin obstrucciones."""
+    pos_actual = obtener_posicion_punta()
+    x0, y0, z0 = pos_actual
+    pos_anterior = pos_actual
+
+    for i in range(1, pasos + 1):
+        if not p.isConnected():
+            break
+
+        x = x0 + (x_destino - x0) * (i / pasos)
+        y = y0 + (y_destino - y0) * (i / pasos)
+        z = z0 + (z_destino - z0) * (i / pasos)
+
+        joint_poses = p.calculateInverseKinematics(
+            robotId, LINK_PUNTA, [x, y, z],
+            maxNumIterations=100,
+            residualThreshold=1e-4
+        )
+
+        for _ in range(3):
+            p.setJointMotorControl2(robotId, 0, p.POSITION_CONTROL, targetPosition=joint_poses[0], force=200)
+            p.setJointMotorControl2(robotId, 1, p.POSITION_CONTROL, targetPosition=joint_poses[1], force=200)
+            p.stepSimulation()
+
+        time.sleep(0.008)
+
+        pos_nueva = obtener_posicion_punta()
+        p.addUserDebugLine(pos_anterior, pos_nueva, lineColorRGB=color, lineWidth=7)
+        pos_anterior = pos_nueva
+
+def reposicionar_punta(x, y, z):
+    """Reposiciona el brazo sin dibujar línea."""
+    joint_poses = p.calculateInverseKinematics(
+        robotId, LINK_PUNTA, [x, y, z],
+        maxNumIterations=100,
+        residualThreshold=1e-4
+    )
+    for _ in range(20):
+        p.setJointMotorControl2(robotId, 0, p.POSITION_CONTROL, targetPosition=joint_poses[0], force=200)
+        p.setJointMotorControl2(robotId, 1, p.POSITION_CONTROL, targetPosition=joint_poses[1], force=200)
+        p.stepSimulation()
+        time.sleep(0.005)
+
+def ejecutar_trazo(tecla):
+    """Trazo frontal ubicado POR DELANTE de la articulación (Y negativo)."""
+    print(f"\n🖊 Dibujando tecla: '{tecla}'")
+    p.removeAllUserDebugItems()
+
+    # LIENZO DELANTERO: Y_LIENZO negativo trae el plano al primer plano frente a la cámara
+    Y_LIENZO = -0.25
+    Z_BAJO = 0.38
+    Z_MEDIO = 0.50
+    Z_ALTO = 0.62
+    X_IZQ = -0.06
+    X_DER = 0.06
+
+    if tecla == '1':
+        reposicionar_punta(-0.03, Y_LIENZO, 0.56)
+        trazar_linea_cartesiana(0.0, Y_LIENZO, Z_ALTO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(0.0, Y_LIENZO, Z_BAJO, pasos=20, color=[1, 1, 0])
+        reposicionar_punta(-0.05, Y_LIENZO, Z_BAJO)
+        trazar_linea_cartesiana(0.05, Y_LIENZO, Z_BAJO, pasos=15, color=[1, 1, 0])
+
+    elif tecla == '2':
+        reposicionar_punta(X_IZQ, Y_LIENZO, Z_ALTO)
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_ALTO, pasos=15, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_MEDIO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_BAJO, pasos=20, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_BAJO, pasos=15, color=[1, 1, 0])
+
+    elif tecla == '3':
+        reposicionar_punta(X_IZQ, Y_LIENZO, Z_ALTO)
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_ALTO, pasos=15, color=[1, 1, 0])
+        trazar_linea_cartesiana(0.0, Y_LIENZO, Z_MEDIO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_MEDIO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_BAJO, pasos=15, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_BAJO, pasos=15, color=[1, 1, 0])
+
+    elif tecla == '4':
+        reposicionar_punta(X_IZQ, Y_LIENZO, Z_ALTO)
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_MEDIO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_MEDIO, pasos=12, color=[1, 1, 0])
+        reposicionar_punta(X_DER, Y_LIENZO, Z_ALTO)
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_BAJO, pasos=20, color=[1, 1, 0])
+
+    elif tecla == '5':
+        reposicionar_punta(X_DER, Y_LIENZO, Z_ALTO)
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_ALTO, pasos=15, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_MEDIO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_MEDIO, pasos=15, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_BAJO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_BAJO, pasos=15, color=[1, 1, 0])
+
+    elif tecla == '6':
+        reposicionar_punta(X_DER, Y_LIENZO, Z_ALTO)
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_ALTO, pasos=15, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_BAJO, pasos=20, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_BAJO, pasos=15, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_MEDIO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_MEDIO, pasos=15, color=[1, 1, 0])
+
+    elif tecla == '7':
+        reposicionar_punta(X_IZQ, Y_LIENZO, Z_ALTO)
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_ALTO, pasos=15, color=[1, 1, 0])
+        trazar_linea_cartesiana(-0.02, Y_LIENZO, Z_BAJO, pasos=20, color=[1, 1, 0])
+
+    elif tecla == '8':
+        reposicionar_punta(X_IZQ, Y_LIENZO, Z_ALTO)
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_ALTO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_MEDIO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_MEDIO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_ALTO, pasos=12, color=[1, 1, 0])
+        reposicionar_punta(X_IZQ, Y_LIENZO, Z_MEDIO)
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_BAJO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_BAJO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_MEDIO, pasos=12, color=[1, 1, 0])
+
+    elif tecla == '9':
+        reposicionar_punta(X_DER, Y_LIENZO, Z_MEDIO)
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_MEDIO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_ALTO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_ALTO, pasos=12, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_BAJO, pasos=20, color=[1, 1, 0])
+
+    elif tecla == '0':
+        reposicionar_punta(X_IZQ, Y_LIENZO, Z_ALTO)
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_ALTO, pasos=15, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_DER, Y_LIENZO, Z_BAJO, pasos=20, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_BAJO, pasos=15, color=[1, 1, 0])
+        trazar_linea_cartesiana(X_IZQ, Y_LIENZO, Z_ALTO, pasos=20, color=[1, 1, 0])
+
+    elif tecla in ['A', '*', '#', 'B', 'C', 'D']:
+        print(f"🧹 Comando '{tecla}': Limpiando pantalla.")
+
+    else:
+        print(f"⚠️ Tecla recibida: '{tecla}'")
+
+# ==========================================
+# 4. BUCLE PRINCIPAL DE CONTROL
+# ==========================================
+print("\n🚀 Sistema listo. Los números se dibujarán en el plano frontal sin que la articulación los tape...")
+
+try:
+    while True:
+        if not p.isConnected():
+            break
+
+        try:
+            if ser.in_waiting > 0:
+                tecla = ser.readline().decode('utf-8', errors='ignore').strip()
+                if tecla:
+                    ejecutar_trazo(tecla)
+        except (serial.SerialException, Exception):
+            pass
+
+        try:
+            p.stepSimulation()
+        except Exception:
+            break
+
+        time.sleep(0.01)
+
+except KeyboardInterrupt:
+    print("\nSimulación finalizada por el usuario.")
+finally:
+    if 'ser' in locals() and ser.is_open:
+        ser.close()
+    try:
+        if p.isConnected():
+            p.disconnect()
+    except Exception:
+        pass
+    print(" Recursos liberados.")
