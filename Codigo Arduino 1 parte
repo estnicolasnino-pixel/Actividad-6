@@ -1,0 +1,66 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <Keypad.h>
+
+// ==========================================
+// 1. CONFIGURACIÓN DEL LCD I2C (16x2)
+// ==========================================
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// ==========================================
+// 2. CONFIGURACIÓN DEL TECLADO MATRICIAL 4x4
+// ==========================================
+const byte FILAS = 4;
+const byte COLUMNAS = 4;
+
+char teclas[FILAS][COLUMNAS] = {
+  {'1', '2', '3', 'A'},
+  {'4', '5', '6', 'B'},
+  {'7', '8', '9', 'C'},
+  {'*', '0', '#', 'D'}
+};
+
+// Intercambio de pines para corregir la traspuesta de la matriz
+byte pinesFilas[FILAS]       = {32, 33, 25, 26};
+byte pinesColumnas[COLUMNAS] = {27, 14, 12, 13};
+
+Keypad teclado = Keypad(makeKeymap(teclas), pinesFilas, pinesColumnas, FILAS, COLUMNAS);
+
+// ==========================================
+// 3. SETUP Y CONFIGURACIÓN INICIAL
+// ==========================================
+void setup() {
+  Serial.begin(115200);
+
+  // Inicialización de bus I2C (SDA -> GPIO 21, SCL -> GPIO 22)
+  Wire.begin(21, 22);
+
+  // Inicialización de pantalla LCD
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("  SISTEMA BRAZO ");
+  lcd.setCursor(0, 1);
+  lcd.print("Presione Tecla..");
+}
+
+// ==========================================
+// 4. BUCLE PRINCIPAL
+// ==========================================
+void loop() {
+  char tecla = teclado.getKey();
+
+  if (tecla) {
+    // 1. Enviar el carácter por puerto serial hacia Python
+    Serial.println(tecla);
+
+    // 2. Actualizar pantalla LCD
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Tecla: ");
+    lcd.print(tecla);
+    
+    lcd.setCursor(0, 1);
+    lcd.print("Dibujando en 3D");
+  }
+}
