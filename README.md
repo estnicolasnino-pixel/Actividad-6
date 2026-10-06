@@ -16,7 +16,15 @@ Este proyecto implementa un sistema de control para un brazo robótico simulado 
 
 ##  Instalación y Uso
 
-1. **Clonar el repositorio:**
-   ```bash
-   git clone [https://github.com/TU_USUARIO/brazo-robotico-pybullet-esp32.git](https://github.com/TU_USUARIO/brazo-robotico-pybullet-esp32.git)
-   cd brazo-robotico-pybullet-esp32
+### 1. Configuración de Archivos y Carpetas
+1. Crea una carpeta principal en tu equipo con el nombre `brazo-robotico-pybullet-esp32`.
+2. Dentro de esa carpeta, asegúrate de tener colocados juntos los siguientes archivos del proyecto:
+   - `control_dibujo.py` (Script principal de Python)
+   - `brazo.urdf` (Modelo 3D del brazo robótico)
+   - `firmware_teclado_lcd.ino` (Código fuente para la ESP32)
+
+### 2. Instalación de Dependencias de Python
+Abre la terminal o consola de comandos en la carpeta de tu proyecto y ejecuta el siguiente comando para instalar las librerías necesarias:
+
+```bash
+pip install pybullet pyserial
