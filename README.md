@@ -1,4 +1,4 @@
-# Actividad-6
+# Actividad primera parte-6
 # Sistema de Dibujo 3D con Brazo Robótico (ESP32 + PyBullet)
 
 Este proyecto implementa un sistema de control para un brazo robótico simulado en 3D dentro del entorno **PyBullet**, controlado mediante comandos enviados vía comunicación serial UART desde una placa **ESP32** conectada a un **teclado matricial 4x4** y una **pantalla LCD I2C**.
