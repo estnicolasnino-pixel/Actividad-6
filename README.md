@@ -28,10 +28,10 @@ pip install pybullet pyserial
 # Sistema Distribución de Visión Artificial y Renderizado en ESP32 + OLED
 
 
-##Actividad segunda  parte-6
+#Actividad segunda  parte-6
 Este proyecto implementa un sistema distribuido de procesamiento de imágenes y transmisión de mapas de bits en tiempo real desde una PC hacia un nodo esclavo microcontrolado.
 
-## Arquitectura del Sistema
+# Arquitectura del Sistema
 * **Nodo A (Maestro Virtual - PC):** Captura el flujo de video vía OpenCV, aplica binarización y empaqueta la matriz de bits mediante un protocolo de trama `[0xAA, BitmapData, 0xFF]`.
 * **Nodo B (Esclavo Físico - ESP32):** Recibe la trama por el puerto serie UART (115200 baudios), parsea la cabecera/pie de control y renderiza la imagen en una pantalla OLED de 0.96" (SSD1306) vía I2C.
 
