@@ -27,7 +27,7 @@ pip install pybullet pyserial
 # Sistema Distribución de Visión Artificial y Renderizado en ESP32 + OLED
 
 
-#Actividad segunda  parte-6
+# Actividad segunda  parte-6
 Este proyecto implementa un sistema distribuido de procesamiento de imágenes y transmisión de mapas de bits en tiempo real desde una PC hacia un nodo esclavo microcontrolado.
 
 # Arquitectura del Sistema
