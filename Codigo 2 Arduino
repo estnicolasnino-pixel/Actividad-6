@@ -1,0 +1,47 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define ANCHO_PANTALLA 128
+#define ALTO_PANTALLA 64
+#define TAMANO_BITMAP 1024 // 128 * 64 / 8 bits por byte
+
+Adafruit_SSD1306 display(ANCHO_PANTALLA, ALTO_PANTALLA, &Wire, -1);
+uint8_t bufferBitmap[TAMANO_BITMAP];
+
+void setup() {
+  // AUMENTAR BUFFER SERIAL (Crucial para recibir tramas grandes de imagen)
+  Serial.setRxBufferSize(2048); 
+  Serial.begin(115200);
+  
+  Wire.begin(21, 22);
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    for (;;);
+  }
+
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+  display.setCursor(15, 25);
+  display.print("MODO DIBUJO LISTO");
+  display.display();
+}
+
+void loop() {
+  // Cuando llegue el byte de cabecera 0xAA
+  if (Serial.available() > 0) {
+    if (Serial.read() == 0xAA) {
+      
+      // Esperar y leer exactamente los 1024 bytes de la imagen
+      size_t bytesLeidos = Serial.readBytes((char*)bufferBitmap, TAMANO_BITMAP);
+      
+      if (bytesLeidos == TAMANO_BITMAP) {
+        display.clearDisplay();
+        // Renderizar el bitmap calcado
+        display.drawBitmap(0, 0, bufferBitmap, ANCHO_PANTALLA, ALTO_PANTALLA, SSD1306_WHITE);
+        display.display();
+      }
+    }
+  }
+}
