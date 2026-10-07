@@ -23,9 +23,6 @@ Este proyecto implementa un sistema de control para un brazo robótico simulado 
    - `brazo.urdf` (Modelo 3D del brazo robótico)
    - `firmware_teclado_lcd.ino` (Código fuente para la ESP32)
 
-## 2. Instalación de Dependencias de Python
-Abre la terminal o consola de comandos en la carpeta de tu proyecto y ejecuta el siguiente comando para instalar las librerías necesarias:
-
 ```bash
 pip install pybullet pyserial
 # Sistema Distribución de Visión Artificial y Renderizado en ESP32 + OLED
