@@ -1,0 +1,80 @@
+import cv2
+import numpy as np
+import serial
+import time
+
+PUERTO_COM = 'COM5'  # Asegúrate de colocar tu puerto COM correcto
+BAUDRATE = 115200
+
+try:
+    ser = serial.Serial(PUERTO_COM, BAUDRATE, timeout=0.1)
+    print(f" Conectado a la ESP32 en {PUERTO_COM}")
+    time.sleep(2)
+except Exception as e:
+    print(f" Error de conexión: {e}")
+    exit()
+
+def enviar_dibujo_a_oled(thresh_img):
+    # 1. Redimensionar exactamente al tamaño físico de la OLED (128x64 píxeles)
+    img_resized = cv2.resize(thresh_img, (128, 64), interpolation=cv2.INTER_AREA)
+
+    # 2. Convertir los píxeles a bits (1 = blanco/dibujo, 0 = negro/fondo)
+    bits = (img_resized > 128).astype(np.uint8)
+    
+    # 3. Empaquetar cada 8 píxeles en 1 byte
+    packed_bytes = np.packbits(bits, axis=-1)
+
+    # 4. Construir trama [HEADER (0xAA), 1024 bytes de imagen, FOOTER (0xFF)]
+    trama = bytearray([0xAA]) + packed_bytes.tobytes() + bytearray([0xFF])
+    
+    ser.write(trama)
+    print("📤 Dibujo transmitido y calcado en la pantalla OLED")
+
+cap = cv2.VideoCapture(0)
+
+if not cap.isOpened():
+    print(" No se pudo abrir la cámara")
+    exit()
+
+print("\n INSTRUCCIONES:")
+print("1. Dibuja lo que quieras (mariposa, rostro, figura) con marcador negro.")
+print("2. Encuádracionlo en el recuadro verde.")
+print("3. Presiona 'ESPACIO' para transmitir el dibujo a la pantalla OLED.")
+print("4. Presiona 'q' para salir.\n")
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    frame = cv2.flip(frame, 1)
+    h, w, _ = frame.shape
+
+    size = 220
+    x1, y1 = (w - size) // 2, (h - size) // 2
+    x2, y2 = x1 + size, y1 + size
+
+    roi = frame[y1:y2, x1:x2]
+
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (3, 3), 0)
+    _, thresh = cv2.threshold(blur, 90, 255, cv2.THRESH_BINARY_INV)
+
+    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    cv2.putText(frame, "Area de Dibujo libre", (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+    cv2.imshow("Camara PC", frame)
+    cv2.imshow("Filtro Binarizado (Thresh)", thresh)
+
+    key = cv2.waitKey(1) & 0xFF
+
+    if key == ord(' '):
+        enviar_dibujo_a_oled(thresh)
+    elif key == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+if ser.is_open:
+    ser.close()
